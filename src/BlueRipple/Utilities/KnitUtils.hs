@@ -231,6 +231,9 @@ brNewNote pp pi' nn pageTitle content = do
     BRC.Unused _ -> return Nothing
     BRC.Used _ -> Just <$> (K.knitEither $ BRC.noteUrl pp pi' nn)
 
+jsonLocations :: BRC.PostPaths Path.Abs -> BRC.PostInfo -> (Path.Path Path.Abs Path.Dir, Text -> Either Text Text)
+jsonLocations pp pi' = (BRC.dataDir pp pi', BRC.dataURL pp pi')
+
 -- returns URL
 brAddJSON :: K.KnitEffects r
           => BRC.PostPaths Path.Abs
