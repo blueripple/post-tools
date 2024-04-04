@@ -53,7 +53,7 @@ import qualified Text.Blaze.Colonnade          as BC
 import qualified Text.Printf                   as PF
 import qualified Knit.Report                   as K
 
-import           BlueRipple.Utilities.KnitUtils ( brAddMarkDown )
+import           BlueRipple.Utilities.KnitUtils ( brAddMarkDown, KnitOne)
 
 data CellPart = CellBorder | CellBackground | CellText deriving stock (Show, Eq, Ord)
 cellPartText :: CellPart -> Text
@@ -226,7 +226,7 @@ textToCell  = BC.Cell mempty . BH.toHtml
 
 brAddRawHtmlTable
   :: forall {-c k ct -} r f a.
-     (K.KnitOne r, Foldable f)
+     (KnitOne r, Foldable f)
   => Maybe T.Text
   -> BH.Attribute
   -> K.Colonnade K.Headed a BC.Cell

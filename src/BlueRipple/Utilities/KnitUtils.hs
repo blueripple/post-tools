@@ -45,6 +45,9 @@ import qualified System.Directory as SD
 import qualified Text.Pandoc.Options as PA
 --import qualified Streamly.Internal.Memory.ArrayStream as Streamly.ByteString
 
+type KnitEffects r = K.KnitEffects BRC.BRLogCategories r
+type KnitOne r = K.KnitOne BRC.BRLogCategories r
+type KnitMany r = K.KnitMany BRC.BRLogCategories r
 
 knitX ::
   forall r a.
@@ -53,7 +56,7 @@ knitX ::
   K.Sem r a
 knitX ma = runExceptT ma >>= (K.knitEither @r)
 
-copyAsset :: K.KnitOne r => T.Text -> T.Text -> K.Sem r ()
+copyAsset :: KnitOne r => T.Text -> T.Text -> K.Sem r ()
 copyAsset sourcePath destDir = do
   sourceExists <- K.liftKnit $ SD.doesFileExist (toString sourcePath)
   if sourceExists
@@ -84,7 +87,7 @@ brWriterOptionsF o =
           PA.writerSectionDivs = True
         }
 
-brAddMarkDown :: K.KnitOne r => T.Text -> K.Sem r ()
+brAddMarkDown :: KnitOne r => T.Text -> K.Sem r ()
 brAddMarkDown = K.addMarkDownWithOptions brMarkDownReaderOptions
   where
     brMarkDownReaderOptions =
@@ -98,12 +101,12 @@ brAddMarkDown = K.addMarkDownWithOptions brMarkDownReaderOptions
                   $ exts
             }
 
-brAddAnchor :: K.KnitOne r => T.Text -> K.Sem r Text
+brAddAnchor :: KnitOne r => T.Text -> K.Sem r Text
 brAddAnchor t = do
   brAddMarkDown $ "<a name=\"" <> t <> "\"></a>"
   return $ "#" <> t
 
-brLineBreak :: K.KnitOne r => K.Sem r ()
+brLineBreak :: KnitOne r => K.Sem r ()
 brLineBreak = brAddMarkDown "\\\n"
 
 brAddDates ::
@@ -121,14 +124,14 @@ brAddDates updated pubDate updateDate tMap =
              else M.empty
    in tMap <> pubT <> updT
 
-brGetTextFromFile :: K.KnitEffects r => Path.Path Path.Abs Path.File -> K.Sem r (Maybe Text)
+brGetTextFromFile :: KnitEffects r => Path.Path Path.Abs Path.File -> K.Sem r (Maybe Text)
 brGetTextFromFile p = do
   isPresent <- K.liftKnit $ SD.doesFileExist $ Path.toFilePath p
   if isPresent
     then Just <$> K.liftKnit (T.readFile $ Path.toFilePath p)
     else return Nothing
 
-brAddToPostFromFile :: K.KnitOne r => (Text -> K.Sem r ()) -> Bool -> Path.Path Path.Abs Path.File -> K.Sem r ()
+brAddToPostFromFile :: KnitOne r => (Text -> K.Sem r ()) -> Bool -> Path.Path Path.Abs Path.File -> K.Sem r ()
 brAddToPostFromFile toPost errorIfMissing p = do
   tM <- brGetTextFromFile p
   case tM of
@@ -140,52 +143,52 @@ brAddToPostFromFile toPost errorIfMissing p = do
           K.logLE K.Warning $ "Post input file " <> show p <> " not found. Inserting placeholder text"
           brAddMarkDown $ "**Post input file " <> show p <> " not found. Please fix/remove**"
 
-brAddToPostFromFileWith :: K.KnitOne r => (Text -> K.Sem r ()) -> Bool -> Path.Path Path.Abs Path.File -> Maybe Text -> K.Sem r ()
+brAddToPostFromFileWith :: KnitOne r => (Text -> K.Sem r ()) -> Bool -> Path.Path Path.Abs Path.File -> Maybe Text -> K.Sem r ()
 brAddToPostFromFileWith toPost errorIfMissing p mRefs = brAddToPostFromFile toPost' errorIfMissing p
   where
     toPost' = maybe toPost (\t -> toPost . (<> "\n" <> t)) mRefs
 
-brAddPostMarkDownFromFileWith :: K.KnitOne r => BRC.PostPaths Path.Abs -> Text -> Maybe Text -> K.Sem r ()
+brAddPostMarkDownFromFileWith :: KnitOne r => BRC.PostPaths Path.Abs -> Text -> Maybe Text -> K.Sem r ()
 brAddPostMarkDownFromFileWith pp postFileEnd mRefs = do
   postInputPath <- K.knitEither $ BRC.postInputPath pp (postFileEnd <> ".md")
   brAddToPostFromFileWith K.addMarkDown False postInputPath mRefs
 
-brAddSharedMarkDownFromFileWith :: K.KnitOne r => BRC.PostPaths Path.Abs -> Text -> Maybe Text -> K.Sem r ()
+brAddSharedMarkDownFromFileWith :: KnitOne r => BRC.PostPaths Path.Abs -> Text -> Maybe Text -> K.Sem r ()
 brAddSharedMarkDownFromFileWith pp postFileEnd mRefs = do
   postInputPath <- K.knitEither $ BRC.sharedInputPath pp (postFileEnd <> ".md")
   brAddToPostFromFileWith K.addMarkDown False postInputPath mRefs
 
-brAddPostMarkDownFromFile :: K.KnitOne r => BRC.PostPaths Path.Abs -> Text -> K.Sem r ()
+brAddPostMarkDownFromFile :: KnitOne r => BRC.PostPaths Path.Abs -> Text -> K.Sem r ()
 brAddPostMarkDownFromFile pp postFileEnd = brAddPostMarkDownFromFileWith pp postFileEnd Nothing
 
-brAddSharedMarkDownFromFile :: K.KnitOne r => BRC.PostPaths Path.Abs -> Text -> K.Sem r ()
+brAddSharedMarkDownFromFile :: KnitOne r => BRC.PostPaths Path.Abs -> Text -> K.Sem r ()
 brAddSharedMarkDownFromFile pp postFileEnd = brAddSharedMarkDownFromFileWith pp postFileEnd Nothing
 
 
-brAddNoteMarkDownFromFileWith :: K.KnitOne r
+brAddNoteMarkDownFromFileWith :: KnitOne r
   => BRC.PostPaths Path.Abs -> BRC.NoteName -> Text -> Maybe Text -> K.Sem r ()
 brAddNoteMarkDownFromFileWith  pp nn noteFileEnd mRefs = do
   notePath <- K.knitEither $ BRC.noteInputPath pp nn (noteFileEnd <> ".md")
   brAddToPostFromFileWith K.addMarkDown False notePath mRefs
 
-brAddNoteMarkDownFromFile :: K.KnitOne r => BRC.PostPaths Path.Abs -> BRC.NoteName -> Text -> K.Sem r ()
+brAddNoteMarkDownFromFile :: KnitOne r => BRC.PostPaths Path.Abs -> BRC.NoteName -> Text -> K.Sem r ()
 brAddNoteMarkDownFromFile  pp nn noteFileEnd = brAddNoteMarkDownFromFileWith pp nn noteFileEnd Nothing
 
-brAddNoteRSTFromFileWith :: K.KnitOne r
+brAddNoteRSTFromFileWith :: KnitOne r
   => BRC.PostPaths Path.Abs -> BRC.NoteName -> Text -> Maybe Text -> K.Sem r ()
 brAddNoteRSTFromFileWith pp nn noteFileEnd mRefs = do
   notePath <- K.knitEither $ BRC.noteInputPath pp nn (noteFileEnd <> ".rst")
   brAddToPostFromFileWith K.addRST False notePath mRefs
 
-brAddNoteRSTFromFile :: K.KnitOne r => BRC.PostPaths Path.Abs -> BRC.NoteName -> Text -> K.Sem r ()
+brAddNoteRSTFromFile :: KnitOne r => BRC.PostPaths Path.Abs -> BRC.NoteName -> Text -> K.Sem r ()
 brAddNoteRSTFromFile  pp nn noteFileEnd = brAddNoteRSTFromFileWith pp nn noteFileEnd Nothing
 
-brDatesFromPostInfo :: K.KnitEffects r => BRC.PostInfo -> K.Sem r (M.Map String String)
+brDatesFromPostInfo :: KnitEffects r => BRC.PostInfo -> K.Sem r (M.Map String String)
 brDatesFromPostInfo (BRC.PostInfo postStage  (BRC.PubTimes ppt mUpt)) = do
   tz <- liftIO $ Time.getCurrentTimeZone
   let formatPTime t = Time.formatTime Time.defaultTimeLocale "%B %e, %Y" t
       formatUPTime t = formatPTime t <> Time.formatTime Time.defaultTimeLocale " (%H:%M:%S)" t
---      getCurrentDay :: K.KnitEffects r => K.Sem r Time.Day
+--      getCurrentDay :: KnitEffects r => K.Sem r Time.Day
 --      getCurrentDay = K.getCurrentTime
       dayFromPT = \case
         BRC.Unpublished -> case postStage of
@@ -201,7 +204,7 @@ brDatesFromPostInfo (BRC.PostInfo postStage  (BRC.PubTimes ppt mUpt)) = do
       return $ mp <> one ("updated", ut)
 
 
-brNewPost :: K.KnitMany r
+brNewPost :: KnitMany r
           => BRC.PostPaths Path.Abs
           -> BRC.PostInfo
           -> Text
@@ -215,7 +218,7 @@ brNewPost pp pi' pageTitle content = do
     content
     brAddMarkDown BRC.brReadMore
 
-brNewNote :: K.KnitMany r
+brNewNote :: KnitMany r
           => BRC.PostPaths Path.Abs
           -> BRC.PostInfo
           -> BRC.NoteName
@@ -235,7 +238,7 @@ jsonLocations :: BRC.PostPaths Path.Abs -> BRC.PostInfo -> (Path.Path Path.Abs P
 jsonLocations pp pi' = (BRC.dataDir pp pi', BRC.dataURL pp pi')
 
 -- returns URL
-brAddJSON :: K.KnitEffects r
+brAddJSON :: KnitEffects r
           => BRC.PostPaths Path.Abs
           -> BRC.PostInfo
           -> Text
@@ -252,7 +255,7 @@ brAddJSON pp postInfo jsonName jsonVal = do
 -- Copy data from an absolute path into data directory so it's available for, e.g.,
 -- hvega
 data WhenDestExists = ReplaceExisting | ExistsIsError | LeaveExisting deriving stock (Eq)
-brCopyDataForPost ::  K.KnitEffects r
+brCopyDataForPost ::  KnitEffects r
                 => BRC.PostPaths Path.Abs
                 -> BRC.PostInfo
                 -> WhenDestExists
