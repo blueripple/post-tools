@@ -88,6 +88,14 @@ knitLogSeverity LogDebugMinimal = K.logDebug 1
 knitLogSeverity LogDebugVerbose = K.logDebug 3
 knitLogSeverity LogDebugAll = K.logDebug 10
 
+data BRLogCategories = BRLogInfo
+
+brLogSeverity :: BRLogCategories -> K.LogSeverity
+brLogSeverity BRLogInfo = K.Info
+
+brLogText :: BRLogCategories -> Text
+brLogText BRLogInfo = "BR"
+
 -- subDir is partial. Which triggers a warning. But the name of the field is used to form the commandLine so
 -- we don't want to prefix it with an underscore to suppress the warning
 data CommandLine =
@@ -98,7 +106,6 @@ data CommandLine =
 
 logLevelCL :: LogLevel
 logLevelCL = LogInfo &= CmdArgs.typ "LOGLEVEL" &= CmdArgs.help "logging Verbosity. One of LogInfo, LogDiagnostic, LogDebugMinimal, LogDebugVerbose, LogDebugAll"
-
 
 stanChainsCL :: Int
 stanChainsCL = 4 &= CmdArgs.typ "NUMCHAINS" &= CmdArgs.help "Number of Stan chains to run."
