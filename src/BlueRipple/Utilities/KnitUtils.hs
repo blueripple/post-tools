@@ -45,9 +45,9 @@ import qualified System.Directory as SD
 import qualified Text.Pandoc.Options as PA
 --import qualified Streamly.Internal.Memory.ArrayStream as Streamly.ByteString
 
-type KnitEffects r = K.KnitEffects BRC.BRLogCategories r
-type KnitOne r = K.KnitOne BRC.BRLogCategories r
-type KnitMany r = K.KnitMany BRC.BRLogCategories r
+type KnitEffects r = K.KnitEffects r
+type KnitOne r = K.KnitOne r
+type KnitMany r = K.KnitMany r
 
 knitX ::
   forall r a.
